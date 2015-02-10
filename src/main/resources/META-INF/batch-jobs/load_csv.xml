@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jee="http://www.springframework.org/schema/jee"
+	xmlns:b="http://www.springframework.org/schema/batch" 
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+                              http://www.springframework.org/schema/beans/spring-beans.xsd
+                              http://www.springframework.org/schema/context 
+                              http://www.springframework.org/schema/context/spring-context.xsd
+                              http://www.springframework.org/schema/jee 
+							  http://www.springframework.org/schema/jee/spring-jee-3.2.xsd
+							  http://www.springframework.org/schema/batch	
+							  http://www.springframework.org/schema/batch/spring-batch-3.0.xsd">
+                              
+		
+	<context:annotation-config />
+	<bean id="writer" class="coder36.batch.PersonItemWriter" scope="step"/>
+	 
+	<b:job id="simpleDemo">
+		<b:step id="step1" next="">		
+			<b:tasklet>			
+				<b:chunk commit-interval="3" reader="reader" writer="writer" skip-limit="10">
+					<b:skippable-exception-classes>
+            			<b:include class="java.lang.RuntimeException"/>
+         			</b:skippable-exception-classes>
+         		</b:chunk>
+			</b:tasklet>
+		</b:step>
+	</b:job>
+
+	<bean id="reader" class="org.springframework.batch.item.file.FlatFileItemReader" scope="step">
+		<property name="resource" value="#{jobParameters['fileName']}"/>
+		<property name="lineMapper"> 
+			<bean class="org.springframework.batch.item.file.mapping.DefaultLineMapper">
+				<property name="lineTokenizer">
+					<bean class="org.springframework.batch.item.file.transform.DelimitedLineTokenizer">
+						<property name="names" value="firstname,surname,dob"/>	
+					</bean>			
+				</property>
+				<property name="fieldSetMapper">
+					<bean class="org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper" >
+						<property name="targetType" value="coder36.batch.PersonLine"/> 
+					</bean> 			
+				</property>
+			</bean>
+		</property>		               
+	</bean>	
+	
+	
+</beans>

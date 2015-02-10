@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:batch="http://www.springframework.org/schema/batch"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:jee="http://www.springframework.org/schema/jee"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+                    http://www.springframework.org/schema/beans/spring-beans.xsd
+                    http://www.springframework.org/schema/batch
+                    http://www.springframework.org/schema/batch/spring-batch.xsd
+					http://www.springframework.org/schema/jdbc
+					http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+					http://www.springframework.org/schema/context 
+                    http://www.springframework.org/schema/context/spring-context.xsd
+                    http://www.springframework.org/schema/tx
+                    http://www.springframework.org/schema/tx/spring-tx.xsd
+					http://www.springframework.org/schema/jee 
+					http://www.springframework.org/schema/jee/spring-jee-3.2.xsd">
+
+ 
+	<jee:jndi-lookup id="dataSource" jndi-name="${batch.data.jndi}" expected-type="javax.sql.DataSource" />
+
+	<bean id="transactionManager" class="org.springframework.transaction.jta.JtaTransactionManager">
+        <property name="allowCustomIsolationLevels" value="true"/>
+    </bean>
+    
+    <jee:jndi-lookup id="entityManagerFactory" jndi-name="${batch.data.entityManagerFactory.jndi}" expected-type="javax.persistence.EntityManagerFactory" />
+    
+ 
+	<batch:job-repository data-source="dataSource" id="jobRepository"
+		transaction-manager="transactionManager" table-prefix="${batch.table.prefix}"/>
+
+ 	<bean id="jobLauncher" class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+ 		<property name="jobRepository" ref="jobRepository"/>
+ 	</bean>
+
+ 	<bean id="batchJobOperator" class="org.springframework.batch.core.launch.support.SimpleJobOperator">
+ 		<property name="jobExplorer" ref="jobExplorer"/>
+ 		<property name="jobLauncher" ref="jobLauncher"/>
+ 		<property name="jobRepository" ref="jobRepository"/>
+ 		<property name="jobRegistry" ref="jobRegistry"/>
+ 	</bean>
+
+	<bean id="jobExplorer" class="org.springframework.batch.core.explore.support.JobExplorerFactoryBean">
+		<property name="dataSource" ref="dataSource"/>
+	</bean>
+
+	<!--  Initialise the database if enabled: -->
+	
+	<jdbc:initialize-database data-source="dataSource" enabled="${batch.data.source.init}" ignore-failures="DROPS">
+		<jdbc:script location="${batch.drop.script}"/>
+		<jdbc:script location="${batch.schema.script}"/>
+	</jdbc:initialize-database>
+	
+
+	<bean id="jobParametersConverter" class="org.springframework.batch.core.jsr.JsrJobParametersConverter">
+		<constructor-arg ref="dataSource"/>
+	</bean>
+
+	<bean id="jobRegistry" class="org.springframework.batch.core.configuration.support.MapJobRegistry"/>
+
+	<bean id="placeholderProperties" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+			<list>
+				<value>classpath:batch-postgresql.properties</value>
+			</list>
+		</property>
+		<property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+		<property name="ignoreResourceNotFound" value="true" />
+		<property name="ignoreUnresolvablePlaceholders" value="false" />
+		<property name="order" value="1" />
+	</bean>
+</beans>
